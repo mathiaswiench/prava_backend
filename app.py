@@ -5,8 +5,7 @@ from utility.logger_local import get_logger
 from utility.read_file import read_file
 import utility.types_db as types_db
 from pathlib import Path
-from os import listdir
-
+import os
 
 
 app = FastAPI()
@@ -22,6 +21,9 @@ PATH_DATA = 'data/'
 async def startup_event():
     global GLOBAL_LOGGER
     GLOBAL_LOGGER = get_logger()
+    if not os.path.isdir(PATH_DATA):
+        os.makedirs(PATH_DATA)
+
     GLOBAL_LOGGER.info('API is starting up')
 
 @app.post("/create_table")
@@ -38,7 +40,7 @@ def create_table():
 @app.post("/readFiles")
 async def read_files():
     global GLOBAL_DATA_PARSED
-    for file in listdir(PATH_DATA):
+    for file in os.listdir(PATH_DATA):
         if not handler_db.check_activitiy_exists(GLOBAL_TABLE_NAME, file, GLOBAL_LOGGER):
             data = await read_file(filename=file, file=PATH_DATA+file, logger=GLOBAL_LOGGER)
             GLOBAL_DATA_PARSED.append(data)
