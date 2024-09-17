@@ -35,6 +35,11 @@ async def startup_event():
     GLOBAL_LOGGER.info("API is starting up")
 
 
+@app.post("/ping")
+async def ping():
+    return {"message": "Up and running"}
+
+
 @app.post("/process")
 async def process():
     await parse_files()
