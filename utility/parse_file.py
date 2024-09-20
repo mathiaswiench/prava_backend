@@ -42,12 +42,13 @@ async def parse_file(filename, file, logger):
             "activityType": safe_getattr("activity_type", None),
             "calories": safe_getattr("calories", None),
             "ascent": round(safe_getattr("ascent", 0)),
-            "avg_pace": str(safe_getattr("pace", None)),
-            "min_heart_rate": int(safe_getattr("hr_min", 0)),
-            "max_heart_rate": int(safe_getattr("hr_max", 0)),
-            "avg_heart_rate": int(safe_getattr("hr_avg", 0)),
-            "time_finished": str(parse_date(safe_getattr("completed_at", 0))),
-            "hr_time_zones": safe_call(tcx.hr_percent_in_zones, zones, default=None),
+            "avgPace": str(safe_getattr("pace", None)),
+            "minHeartRate": int(safe_getattr("hr_min", 0)),
+            "maxHeartRate": int(safe_getattr("hr_max", 0)),
+            "avgHeartRate": int(safe_getattr("hr_avg", 0)),
+            "timeFinished": str(parse_date(safe_getattr("completed_at", 0))),
+            # "hr_time_zones": safe_call(tcx.hr_percent_in_zones, zones, default=None),
+            # "waypoints": safe_call(tcx.position_values, default=None),
         }
         return data
     except Exception as e:

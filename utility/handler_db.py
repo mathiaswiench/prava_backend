@@ -57,41 +57,29 @@ def get_table_names(logger):
         return None
 
 
-def addRow(tableName, v, logger):
+def addRow(tableName, data, logger):
     query = f"""
     INSERT INTO {tableName} 
-    (fileReference, duration, distance, activityType, calories, ascent, avg_pace, minHeartRate, maxHeartRate, avgHeartRate, timeFinished) 
+    ({', '.join(data.keys())}) 
     VALUES 
-    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    ({', '.join(['?' for _ in data])});
     """
-    params = (
-        v["fileName"],
-        v["duration"],
-        v["distance"],
-        v["activityType"],
-        v["calories"],
-        v["ascent"],
-        v["avg_pace"],
-        v["min_heart_rate"],
-        v["max_heart_rate"],
-        v["avg_heart_rate"],
-        v["time_finished"],
-    )
+
+    params = tuple(value for value in data.values())
     global_cur.execute(query, params)
     global_con.commit()
 
-    res = global_cur.execute(
-        f"SELECT fileReference FROM {tableName} WHERE fileReference=?", (v["fileName"],)
-    )
-    if res.fetchone():
-        logger.info(f'Activity {v["fileName"]} successfully added to {tableName}')
+    res = global_cur.execute(f"SELECT * FROM {tableName}")
+    row = res.fetchone()
+    if row:
+        logger.info(f"Activity '{row[0]}' successfully added to {tableName}")
     else:
-        logger.warning(f'Error adding {v["fileName"]}')
+        logger.warning(f'Error adding {data["fileName"]}')
 
 
-def check_activitiy_exists(tableName, fileReference, logger):
+def check_activitiy_exists(tableName, fileName, logger):
     query = f"""
-    SELECT * FROM {tableName} WHERE fileReference == '{fileReference}';
+    SELECT * FROM {tableName} WHERE fileName == '{fileName}';
     """
     res = global_cur.execute(query)
     logger.info(res)

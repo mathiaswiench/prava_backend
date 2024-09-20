@@ -1,13 +1,13 @@
 DB_SCHEMA = [
-    ("fileReference", "string"),
+    ("fileName", "string"),
     ("duration", "float"),
     ("distance", "float"),
     ("activityType", "string"),
     ("calories", "int"),
     ("ascent", "int"),
-    ("avg_pace", "string"),
+    ("avgPace", "string"),
     ("minHeartRate", "int"),
     ("maxHeartRate", "int"),
     ("avgHeartRate", "int"),
-    ("timeFinished", "string")
+    ("timeFinished", "string"),
 ]
