@@ -31,10 +31,10 @@ CREATE TABLE activities (
 
 TABLE_WAYPOINTS = """
 CREATE TABLE waypoints (
+    waypointFile INT,
+    sequence INT,
     latitude FLOAT,
     longitude FLOAT,
-    sequence INT,
-    waypointFile INT,
     FOREIGN KEY(waypointFile) REFERENCES activities(fileId)
 );
 """

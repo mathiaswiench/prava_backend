@@ -1,1 +1,1 @@
-SELECT * FROM waypoints;
+SELECT * FROM activities;

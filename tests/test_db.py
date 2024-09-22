@@ -2,7 +2,7 @@ from os import listdir
 import utility.handler_db as handler_db
 from utility.logger_local import get_logger
 from utility.parse_file import parse_file
-import utility.types_db as types_db
+import utility.queries_db as queries_db
 import pytest
 
 GLOBAL_LOGGER = get_logger()
@@ -37,21 +37,21 @@ def run_before_and_after_tests(tmpdir):
 
 def test_check_creation_table():
     handler_db.checkConnection(GLOBAL_DB_NAME, GLOBAL_LOGGER)
-    handler_db.createTable(GLOBAL_TABLE_NAME, types_db.DB_SCHEMA, GLOBAL_LOGGER)
+    handler_db.createTable(GLOBAL_TABLE_NAME, queries_db.DB_SCHEMA, GLOBAL_LOGGER)
     res = handler_db.get_table_names(GLOBAL_LOGGER)
     assert res[0][0] == "activities"
 
 
 @pytest.mark.asyncio
 async def test_read_files():
-    handler_db.createTable(GLOBAL_TABLE_NAME, types_db.DB_SCHEMA, GLOBAL_LOGGER)
+    handler_db.createTable(GLOBAL_TABLE_NAME, queries_db.DB_SCHEMA, GLOBAL_LOGGER)
     res = await mock_read_files()
     assert res == 3
 
 
 @pytest.mark.asyncio
 async def test_get_avg():
-    handler_db.createTable(GLOBAL_TABLE_NAME, types_db.DB_SCHEMA, GLOBAL_LOGGER)
+    handler_db.createTable(GLOBAL_TABLE_NAME, queries_db.DB_SCHEMA, GLOBAL_LOGGER)
     await mock_read_files()
     res = handler_db.getAvg(GLOBAL_TABLE_NAME, "distance", GLOBAL_LOGGER)
     assert round(float(res), 2) == 39.73
@@ -59,7 +59,7 @@ async def test_get_avg():
 
 @pytest.mark.asyncio
 async def test_get_total_time():
-    handler_db.createTable(GLOBAL_TABLE_NAME, types_db.DB_SCHEMA, GLOBAL_LOGGER)
+    handler_db.createTable(GLOBAL_TABLE_NAME, queries_db.DB_SCHEMA, GLOBAL_LOGGER)
     await mock_read_files()
     res = handler_db.getTotalTime(GLOBAL_TABLE_NAME, GLOBAL_LOGGER)
     assert res == '5.0 "Hours", 51.0, "Minutes", 41.0, "Seconds"'
@@ -67,7 +67,7 @@ async def test_get_total_time():
 
 @pytest.mark.asyncio
 async def test_get_sum():
-    handler_db.createTable(GLOBAL_TABLE_NAME, types_db.DB_SCHEMA, GLOBAL_LOGGER)
+    handler_db.createTable(GLOBAL_TABLE_NAME, queries_db.DB_SCHEMA, GLOBAL_LOGGER)
     await mock_read_files()
     res = handler_db.getSum(GLOBAL_TABLE_NAME, "distance", GLOBAL_LOGGER)
     assert float(res) == 119.18

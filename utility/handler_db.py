@@ -80,18 +80,6 @@ def addRow(tableName, data, logger):
         return None
 
 
-def check_activitiy_exists(tableName, fileName, logger):
-    query = f"""
-    SELECT * FROM {tableName} WHERE fileName == '{fileName}';
-    """
-    res = global_cur.execute(query)
-    logger.info(res)
-    if res.fetchone():
-        return True
-    else:
-        return False
-
-
 def getSum(tableName, column, logger):
     query = f"SELECT SUM({column}) FROM {tableName};"
     result = global_cur.execute(query)
@@ -126,3 +114,41 @@ def getTotalTime(tableName, logger):
     mm, ss = divmod(result.fetchone()[0], 60)
     hh, mm = divmod(mm, 60)
     return f'{hh} "Hours", {mm}, "Minutes", {ss}, "Seconds"'
+
+
+def getActivity(tableName, column, condition, logger):
+    # Get column names
+    column_query = f"PRAGMA table_info({tableName})"
+    column_res = global_cur.execute(column_query)
+    columns = [col[1] for col in column_res.fetchall()]
+
+    # Get row data
+    data_query = f"SELECT * FROM {tableName} WHERE {column} IS '{condition}'"
+    data_res = global_cur.execute(data_query)
+    row = data_res.fetchone()
+    if row is not None:
+        row_dict = dict(zip(columns, row))
+        return row_dict
+    else:
+        return None
+
+
+def getWaypoints(tableName, column, condition, logger):
+    # Get column names
+    column_query = f"PRAGMA table_info({tableName})"
+    column_res = global_cur.execute(column_query)
+    columns = [col[1] for col in column_res.fetchall()]
+
+    # Get row data
+    data_query = f"SELECT * FROM {tableName} WHERE {column} IS '{condition}'"
+    data_res = global_cur.execute(data_query)
+    rows = data_res.fetchall()
+    waypoints = []
+    if rows is not None:
+        for row in rows:
+            waypoint = dict(zip(columns, row))
+            waypoints.append(waypoint)
+    else:
+        return None
+
+    return waypoints

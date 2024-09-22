@@ -3,9 +3,11 @@ from pydantic import BaseModel
 import utility.handler_db as handler_db
 from utility.logger_local import get_logger
 from utility.parse_file import parse_file
-import utility.types_db as types_db
+import utility.queries_db as queries_db
 from pathlib import Path
 import os
+
+from utility.types import ActivityRequest
 
 
 app = FastAPI()
@@ -28,10 +30,10 @@ async def startup_event():
     if not handler_db.get_table_names(GLOBAL_LOGGER):
         try:
             handler_db.createTable(
-                GLOBAL_TABLE_ACTIVITIES, types_db.TABLE_ACITVITIES, GLOBAL_LOGGER
+                GLOBAL_TABLE_ACTIVITIES, queries_db.TABLE_ACITVITIES, GLOBAL_LOGGER
             )
             handler_db.createTable(
-                GLOBAL_TABLE_WAYPOINTS, types_db.TABLE_WAYPOINTS, GLOBAL_LOGGER
+                GLOBAL_TABLE_WAYPOINTS, queries_db.TABLE_WAYPOINTS, GLOBAL_LOGGER
             )
             res = handler_db.get_table_names(GLOBAL_LOGGER)
             return {"message": f"Successfully created table: {res[0]}"}
@@ -44,6 +46,34 @@ async def startup_event():
 @app.post("/ping")
 async def ping():
     return {"message": "Up and running"}
+
+
+@app.post("/get_activity")
+async def create_table(request: ActivityRequest):
+    if (
+        handler_db.getRow(
+            tableName=GLOBAL_TABLE_ACTIVITIES, column="fileName", condition=request.file
+        )
+        is not None
+    ):
+        try:
+            activities = handler_db.getActivity(
+                tableName=GLOBAL_TABLE_ACTIVITIES,
+                column="fileName",
+                condition=request.file,
+                logger=GLOBAL_LOGGER,
+            )
+            waypoints = handler_db.getWaypoints(
+                tableName=GLOBAL_TABLE_WAYPOINTS,
+                column="waypointFile",
+                condition=activities["fileId"],
+                logger=GLOBAL_LOGGER,
+            )
+            activities["waypoints"] = waypoints
+            GLOBAL_LOGGER.info(f"Successfully fetched data for {request.file}")
+            return activities
+        except Exception as e:
+            return {"message": f"Error fetching {request.file}: {e}"}
 
 
 @app.post("/process")
@@ -59,6 +89,7 @@ async def upload_files(files: list[UploadFile]):
     # Check if the file is a .tcx file
     uploaded_files = []
     try:
+        # Upload files
         for file in files:
             if ".tcx" in file.filename:
                 with open(PATH_DATA + file.filename, "wb") as f:
@@ -68,6 +99,8 @@ async def upload_files(files: list[UploadFile]):
                 file.file.close()
             else:
                 continue
+        # Parse Files
+        await parse_files()
     except Exception as e:
         return {f'message": "There was an error uploading the file: {repr(e)}'}
 
@@ -78,8 +111,8 @@ async def upload_files(files: list[UploadFile]):
 async def parse_files():
     files_parsed = []
     for file in os.listdir(PATH_DATA):
-        if not handler_db.check_activitiy_exists(
-            GLOBAL_TABLE_ACTIVITIES, file, GLOBAL_LOGGER
+        if not handler_db.getRow(
+            tableName=GLOBAL_TABLE_ACTIVITIES, column="fileName", condition=file
         ):
             data = await parse_file(
                 filename=file, file=PATH_DATA + file, logger=GLOBAL_LOGGER
@@ -104,7 +137,7 @@ async def parse_files():
                     handler_db.addRow(GLOBAL_TABLE_WAYPOINTS, data, GLOBAL_LOGGER)
 
     return {
-        "message": f"Successfully parsed {len(files_parsed)} files.",
+        "message": f"Successfully parsed {len(files_parsed)} files: {files_parsed}",
         "data": len(files_parsed),
     }
 
@@ -144,10 +177,10 @@ async def create_table():
     try:
         handler_db.checkConnection(GLOBAL_DB_NAME, GLOBAL_LOGGER)
         handler_db.createTable(
-            GLOBAL_TABLE_ACTIVITIES, types_db.TABLE_ACITVITIES, GLOBAL_LOGGER
+            GLOBAL_TABLE_ACTIVITIES, queries_db.TABLE_ACITVITIES, GLOBAL_LOGGER
         )
         handler_db.createTable(
-            GLOBAL_TABLE_WAYPOINTS, types_db.TABLE_WAYPOINTS, GLOBAL_LOGGER
+            GLOBAL_TABLE_WAYPOINTS, queries_db.TABLE_WAYPOINTS, GLOBAL_LOGGER
         )
         res = handler_db.get_table_names(GLOBAL_LOGGER)
         return {"message": f"Successfully created table: {res}"}
