@@ -35,6 +35,25 @@ async def parse_file(filename, file, logger):
                 logger.error(f"Error reading file: {e}")
                 logger.info({"Exception": str(e)})
 
+        def convert_waypoints():
+            waypoints_raw = safe_call(tcx.position_values, default=None)
+            if waypoints_raw is None:
+                logger.info("No waypoints found.")
+                return {}
+            converted_waypoints = []
+            count = 0
+            for waypoint in waypoints_raw:
+                converted_waypoints.append(
+                    {
+                        "sequence": count,
+                        "latitude": waypoint[0],
+                        "longitude": waypoint[1],
+                    }
+                )
+                count += 1
+
+            return converted_waypoints
+
         data = {
             "fileName": filename,
             "duration": td(seconds=round(safe_getattr("duration", 0))).seconds,
@@ -48,7 +67,7 @@ async def parse_file(filename, file, logger):
             "avgHeartRate": int(safe_getattr("hr_avg", 0)),
             "timeFinished": str(parse_date(safe_getattr("completed_at", 0))),
             # "hr_time_zones": safe_call(tcx.hr_percent_in_zones, zones, default=None),
-            # "waypoints": safe_call(tcx.position_values, default=None),
+            "waypoints": convert_waypoints(),
         }
         return data
     except Exception as e:

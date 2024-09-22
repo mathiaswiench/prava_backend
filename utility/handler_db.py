@@ -18,17 +18,8 @@ def checkConnection(dbName: str, logger):
         logger.info(f"Error with {dbName}: {Exception}")
 
 
-def createTable(tableName, types, logger):
-    # tableName = string
-    # types = list of tuples
-    # e.g types = [('name', 'TEXT'), ('age', 'INTEGER')]
-    stringifiedTypes = ""
-    for i in range(len(types)):
-        stringifiedTypes = stringifiedTypes + " ".join(types[i])
-        if i != len(types) - 1:
-            stringifiedTypes = stringifiedTypes + ", "
-    command = f"CREATE TABLE '{tableName}' ({stringifiedTypes});"
-    global_cur.execute(command)
+def createTable(tableName, query, logger):
+    global_cur.execute(query)
 
     res = global_cur.execute(
         f"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}';"
@@ -36,7 +27,7 @@ def createTable(tableName, types, logger):
     if res.fetchone():
         logger.info(f"Table {tableName} created successfully for {global_dbName}")
     else:
-        logger.warning(f"Error creating table {tableName} with types: {types}")
+        logger.warning(f"Error creating table {tableName} with types: {query}")
 
 
 def get_table_names(logger):
@@ -53,6 +44,17 @@ def get_table_names(logger):
     res_fetched = res.fetchall()
     if len(res_fetched) > 0:
         return res_fetched
+    else:
+        return None
+
+
+def getRow(tableName, column, condition):
+    res = global_cur.execute(
+        f"SELECT * FROM {tableName} WHERE {column} IS '{condition}'"
+    )
+    row = res.fetchone()
+    if res is not None:
+        return row
     else:
         return None
 
@@ -75,6 +77,7 @@ def addRow(tableName, data, logger):
         logger.info(f"Activity '{row[0]}' successfully added to {tableName}")
     else:
         logger.warning(f'Error adding {data["fileName"]}')
+        return None
 
 
 def check_activitiy_exists(tableName, fileName, logger):
