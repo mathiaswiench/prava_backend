@@ -7,8 +7,8 @@ For parsing the .tcx file, the [python-tcxparser](https://github.com/vkurup/pyth
 
 Create a Python environment and activate it.
 
-1. `pip install -r requirements.txt`
-2. `fastapi dev main.py`
+1. `poetry install`
+2. `poetry run python -m app.mai`
 
 Now you should be able to access the OpenAPI docs at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) and call the API via [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
@@ -69,5 +69,5 @@ You can create a docker container to use the API:
 
 ```sh
 docker build -t prava-app .
-docker run --name prava-app  -p 8080:8080 prava
+docker run --name prava-app  -p 8000:8000 prava-app
 ```
