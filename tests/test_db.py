@@ -19,8 +19,10 @@ async def mock_read_files():
     global GLOBAL_DATA_PARSED
     for file in listdir(PATH_TEST_DATA):
         if not handler_db.getRow(tableName=GLOBAL_TABLE_NAME, column="fileName", condition=file):
-            data = await parse_file(filename=file, file=PATH_TEST_DATA + file, logger=GLOBAL_LOGGER)
-            GLOBAL_DATA_PARSED.append(data)
+            data = await parse_file(
+                filename=file, file=PATH_TEST_DATA + "/" + file, logger=GLOBAL_LOGGER
+            )
+            data.pop("waypoints", None)
             handler_db.addRow(GLOBAL_TABLE_NAME, data, GLOBAL_LOGGER)
             number_rows = handler_db.countRows(GLOBAL_TABLE_NAME, GLOBAL_LOGGER)
     GLOBAL_LOGGER.info(number_rows)
