@@ -135,7 +135,6 @@ def getActivities(tableName, logger):
             )
             row_dict["waypoints"] = waypoints
             row_response.append(row_dict)
-            logger.info(f"Found {len(row_response)} activities in {tableName}")
         return row_response
 
     else:
