@@ -49,9 +49,7 @@ def get_table_names(logger):
 
 
 def getRow(tableName, column, condition):
-    res = global_cur.execute(
-        f"SELECT * FROM {tableName} WHERE {column} IS '{condition}'"
-    )
+    res = global_cur.execute(f"SELECT * FROM {tableName} WHERE {column} IS '{condition}'")
     row = res.fetchone()
     if res is not None:
         return row
@@ -114,6 +112,34 @@ def getTotalTime(tableName, logger):
     mm, ss = divmod(result.fetchone()[0], 60)
     hh, mm = divmod(mm, 60)
     return f'{hh} "Hours", {mm}, "Minutes", {ss}, "Seconds"'
+
+
+def getActivities(tableName, logger):
+    row_response = []
+
+    # Get column names
+    column_query = f"PRAGMA table_info({tableName})"
+    column_res = global_cur.execute(column_query)
+    columns = [col[1] for col in column_res.fetchall()]
+
+    # Get row data
+    data_query = f"SELECT * FROM {tableName}"
+    data_res = global_cur.execute(data_query)
+    rows = data_res.fetchall()
+    logger.info(f"Found {len(rows)} activities in {tableName}")
+    if rows is not None:
+        for row in rows:
+            row_dict = dict(zip(columns, row))
+            waypoints = getWaypoints(
+                tableName="waypoints", column="waypointFile", condition=row[0], logger=logger
+            )
+            row_dict["waypoints"] = waypoints
+            row_response.append(row_dict)
+            logger.info(f"Found {len(row_response)} activities in {tableName}")
+        return row_response
+
+    else:
+        return None
 
 
 def getActivity(tableName, column, condition, logger):
