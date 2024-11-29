@@ -6,7 +6,7 @@ import json
 from dateutil import parser
 
 
-async def parse_file(filename, file, logger):
+async def parse_tcx_file(filename, file, logger):
     try:
         tcx = TCXParser(file)
         zones = {
@@ -69,7 +69,7 @@ async def parse_file(filename, file, logger):
             # "hr_time_zones": safe_call(tcx.hr_percent_in_zones, zones, default=None),
             "waypoints": convert_waypoints(),
         }
-        return data
+        return [data]
     except Exception as e:
         logger.error(f"Error reading file: {repr(e)}")
         return {f"Exception: {repr(e)}"}

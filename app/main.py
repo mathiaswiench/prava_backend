@@ -1,18 +1,24 @@
+from typing import List, Optional
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel
+
+from app.baml_client.types import Activity
+from app.utility.parse_csv_file import parse_csv_file
 from .utility import handler_db, queries_db
 from .utility.logger_local import get_logger
-from .utility.parse_file import parse_file
+from .utility.parse_tcx_file import parse_tcx_file
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 from fastapi.responses import HTMLResponse
 import logging
-
+from .baml_client.sync_client import b
 import os
+from baml_py import ClientRegistry
+from dotenv import load_dotenv
+import pandas as pd
 
-from .utility.types import ActivityRequest
 
 GLOBAL_LOGGER = None
 GLOBAL_TABLE_ACTIVITIES = "activities"
@@ -20,6 +26,7 @@ GLOBAL_TABLE_WAYPOINTS = "waypoints"
 GLOBAL_DB_NAME = "prava.db"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PATH_DATA = os.path.join(BASE_DIR, "data")
+load_dotenv()
 
 
 @asynccontextmanager
@@ -41,8 +48,18 @@ async def lifespan(app: FastAPI):
             GLOBAL_LOGGER.info(f"Successfully created table: {res[0]}")
         except Exception as e:
             GLOBAL_LOGGER.error(f"Error creating the DB: {e}")
-
     GLOBAL_LOGGER.info("API is starting up")
+
+    # Create baml client
+    cr = ClientRegistry()
+    token = os.environ.get("OPENAI_API_KEY")
+    cr.add_llm_client(
+        name="CustomGPT4o",
+        provider="openai",
+        options={"model": "gpt-4o", "api_key": os.environ.get("OPENAI_API_KEY")},
+    )
+    cr.set_primary("CustomGPT4o")
+
     yield
 
 
@@ -65,15 +82,16 @@ def create_app():
         return {"message": "Up and running"}
 
     @app.get("/get_activities")
-    async def get_activities():
+    async def get_activities(with_waypoints: Optional[bool] = False) -> List[Activity] | None:
         try:
             activities = handler_db.getActivities(
                 tableName=GLOBAL_TABLE_ACTIVITIES,
                 logger=GLOBAL_LOGGER,
+                with_waypoints=with_waypoints,
             )
             return activities
         except Exception as e:
-            return {"message": f"Error fetching all activities: {e}"}
+            raise HTTPException(status_code=500, detail=f"Error fetching all activities: {e}")
 
     @app.post("/upload_files")
     async def upload_files(files: list[UploadFile]):
@@ -87,6 +105,12 @@ def create_app():
                     with open(PATH_DATA + file.filename, "wb") as f:
                         while contents := file.file.read(1024 * 1024):
                             f.write(contents)
+                    uploaded_files.append(file.filename)
+                    file.file.close()
+                elif ".csv" in file.filename:
+                    with open(PATH_DATA + file.filename, "wb") as f:
+                        content = file.file.read()
+                        f.write(content)
                     uploaded_files.append(file.filename)
                     file.file.close()
                 else:
@@ -106,27 +130,33 @@ def create_app():
             if not handler_db.getRow(
                 tableName=GLOBAL_TABLE_ACTIVITIES, column="fileName", condition=file
             ):
-                data = await parse_file(
-                    filename=file, file=PATH_DATA + "/" + file, logger=GLOBAL_LOGGER
-                )
-                files_parsed.append(data["fileName"])
-                only_waypoints = data["waypoints"]
-                data.pop("waypoints", None)
-                handler_db.addRow(GLOBAL_TABLE_ACTIVITIES, data, GLOBAL_LOGGER)
-                row = handler_db.getRow(
-                    tableName=GLOBAL_TABLE_ACTIVITIES,
-                    column="fileName",
-                    condition=data["fileName"],
-                )
-                if row is not None:
-                    for entry in only_waypoints:
-                        data = {
-                            "sequence": entry["sequence"],
-                            "longitude": entry["longitude"],
-                            "latitude": entry["latitude"],
-                            "waypointFile": row[0],
-                        }
-                        handler_db.addRow(GLOBAL_TABLE_WAYPOINTS, data, GLOBAL_LOGGER)
+                if ".csv" in file:
+                    data = await parse_csv_file(
+                        filename=file, file=PATH_DATA + "/" + file, logger=GLOBAL_LOGGER
+                    )
+                if ".tcx" in file:
+                    data = await parse_tcx_file(
+                        filename=file, file=PATH_DATA + "/" + file, logger=GLOBAL_LOGGER
+                    )
+                for d in data:
+                    files_parsed.append(d["fileName"])
+                    only_waypoints = d["waypoints"]
+                    d.pop("waypoints", None)
+                    handler_db.addRow(GLOBAL_TABLE_ACTIVITIES, d, GLOBAL_LOGGER)
+                    row = handler_db.getRow(
+                        tableName=GLOBAL_TABLE_ACTIVITIES,
+                        column="fileName",
+                        condition=d["fileName"],
+                    )
+                    if row is not None and len(only_waypoints) > 0:
+                        for entry in only_waypoints:
+                            data = {
+                                "sequence": entry["sequence"],
+                                "longitude": entry["longitude"],
+                                "latitude": entry["latitude"],
+                                "waypointFile": row[0],
+                            }
+                            handler_db.addRow(GLOBAL_TABLE_WAYPOINTS, data, GLOBAL_LOGGER)
 
         return {
             "message": f"Successfully parsed {len(files_parsed)} files: {files_parsed}",
@@ -184,6 +214,15 @@ def create_app():
             return {"message": f"Deleted table {res1, res2}"}
         except Exception as e:
             return {"message": f"{e}"}
+
+    @app.post("/baml")
+    async def baml():
+        data: List[Activity] | None = await get_activities()
+
+        if data is not None:
+            response = b.TrainingPlanGenerator(data)
+            logging.info(response)
+            return response
 
     return app
 

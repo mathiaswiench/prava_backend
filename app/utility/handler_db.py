@@ -1,6 +1,9 @@
 import sqlite3
 from datetime import datetime as dt
 from datetime import timedelta as td
+from typing import List, Optional
+
+from app.baml_client.types import Activity
 
 global_con = None
 global_cur = None
@@ -114,8 +117,8 @@ def getTotalTime(tableName, logger):
     return f'{hh} "Hours", {mm}, "Minutes", {ss}, "Seconds"'
 
 
-def getActivities(tableName, logger):
-    row_response = []
+def getActivities(tableName: str, logger, with_waypoints: bool) -> Optional[List[Activity]]:
+    row_response: List[Activity] = []
 
     # Get column names
     column_query = f"PRAGMA table_info({tableName})"
@@ -127,16 +130,17 @@ def getActivities(tableName, logger):
     data_res = global_cur.execute(data_query)
     rows = data_res.fetchall()
     logger.info(f"Found {len(rows)} activities in {tableName}")
-    if rows is not None:
+
+    if rows:
         for row in rows:
             row_dict = dict(zip(columns, row))
-            waypoints = getWaypoints(
-                tableName="waypoints", column="waypointFile", condition=row[0], logger=logger
-            )
-            row_dict["waypoints"] = waypoints
+            if with_waypoints:
+                waypoints = getWaypoints(
+                    tableName="waypoints", column="waypointFile", condition=row[0], logger=logger
+                )
+                row_dict["waypoints"] = waypoints
             row_response.append(row_dict)
         return row_response
-
     else:
         return None
 

@@ -2,7 +2,7 @@ from os import listdir
 import os
 import app.utility.handler_db as handler_db
 from app.utility.logger_local import get_logger
-from app.utility.parse_file import parse_file
+from app.utility.parse_tcx_file import parse_tcx_file
 import app.utility.queries_db as queries_db
 import pytest
 
@@ -19,7 +19,7 @@ async def mock_read_files():
     global GLOBAL_DATA_PARSED
     for file in listdir(PATH_TEST_DATA):
         if not handler_db.getRow(tableName=GLOBAL_TABLE_NAME, column="fileName", condition=file):
-            data = await parse_file(
+            data = await parse_tcx_file(
                 filename=file, file=PATH_TEST_DATA + "/" + file, logger=GLOBAL_LOGGER
             )
             data.pop("waypoints", None)
